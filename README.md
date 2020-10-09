@@ -1,2 +1,2 @@
 # domesticStick
-STM32 librarys for my smart dacha units 
+STM32 librarys for smartdacha units 
