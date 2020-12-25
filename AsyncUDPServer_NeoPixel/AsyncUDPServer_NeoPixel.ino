@@ -35,8 +35,8 @@ RgbColor red(200,0,0);
 RgbColor green(0,200,0);
 
 // WiFi setup
-const char * ssid = "Dimanche";
-const char * password = "1234567899";
+const char * ssid = "your_ssid";
+const char * password = "your_passwORd32";
 
 AsyncUDP udp;
 
