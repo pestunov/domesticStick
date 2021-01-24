@@ -21,11 +21,10 @@
 #include "AsyncUDP.h"
 #include <NeoPixelBus.h>
 
-/*  // WiFi setup
- *  const char * ssid = "my_ssid";
- *  const char * password = "my_password";
- */
-#include </home/pi/password.h>
+#include "/home/pi/secure.h"
+//#include "D:/1_Projects/secure.h"
+const char * ssid = SECURE_SSID;
+const char * password = SECURE_PASSWORD;
 
 //global variables
 boolean flag, tag;
@@ -38,6 +37,7 @@ const uint8_t PixelPin = 4;  // make sure to set this to the correct pin, ignore
 NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> strip(PixelCount, PixelPin);
 RgbColor black(0);
 RgbColor red(200,0,0);
+RgbColor dark_red(1,0,0);
 RgbColor green(0,200,0);
 
 AsyncUDP udp;
@@ -66,7 +66,7 @@ void setup(){
         strip.Show();
       } else {
         tag = true;
-        strip.SetPixelColor(0, red);  
+        strip.SetPixelColor(0, dark_red);  
         strip.Show();
       }
     }
@@ -77,7 +77,7 @@ void setup(){
     Serial.println(WiFi.localIP());
     udp.onPacket([](AsyncUDPPacket packet) {
       int len = packet.length(); int ii = 0;
-      while (ii < len) {
+      while (ii < (len-4)) {
         byte pixN = packet.data()[ii]; ii++;
         byte pixR = packet.data()[ii]; ii++;
         byte pixG = packet.data()[ii]; ii++;

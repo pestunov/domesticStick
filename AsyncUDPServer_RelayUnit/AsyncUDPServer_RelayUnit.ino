@@ -20,24 +20,16 @@
 #include "WiFi.h"
 #include "AsyncUDP.h"
 
-/*  // WiFi setup
- *  const char * ssid = "my_ssid";
- *  const char * password = "my_password";
- */
-#include </home/pi/password.h>
+#include "/home/pi/secure.h"
+//#include "D:/1_Projects/secure.h"
+const char * ssid = SECURE_SSID;
+const char * password = SECURE_PASSWORD;
+
+boolean tag;
 
 AsyncUDP udp;
 
 void setup(){
-  // this resets all the neopixels to an off state
-  strip.Begin();
-  strip.SetPixelColor(0, green);  // power on. 1st green.
-                                  // wait for wifi connected
-  for (int pixN = 1; pixN < PixelCount; pixN++) {
-    strip.SetPixelColor(pixN, black);
-  }
-  strip.Show();
-
   Serial.begin(115200);
 
   WiFi.mode(WIFI_STA);
@@ -48,12 +40,10 @@ void setup(){
       delay(1000);
       if (tag) {
         tag = false;
-        strip.SetPixelColor(0, black);
-        strip.Show();
+        // do something
       } else {
         tag = true;
-        strip.SetPixelColor(0, red);  
-        strip.Show();
+        // do something
       }
     }
   }
@@ -68,10 +58,8 @@ void setup(){
         byte pixR = packet.data()[ii]; ii++;
         byte pixG = packet.data()[ii]; ii++;
         byte pixB = packet.data()[ii]; ii++;
-        RgbColor myColor(pixR,pixG,pixB);
-        strip.SetPixelColor(pixN, myColor);
       }
-      strip.Show();
+      //strip.Show();
     });
   }
 }
