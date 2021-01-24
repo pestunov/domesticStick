@@ -25,11 +25,17 @@
 const char * ssid = SECURE_SSID;
 const char * password = SECURE_PASSWORD;
 
+#define RELAY_1 16
+
 boolean tag;
+int command_parse_counter 
 
 AsyncUDP udp;
 
 void setup(){
+  // initialize digital pins
+  digitalWrite(RELAY_1, LOW);   // turn the port off
+  pinMode(RELAY_1, OUTPUT);     // pin as output
   Serial.begin(115200);
 
   WiFi.mode(WIFI_STA);
@@ -48,16 +54,13 @@ void setup(){
     }
   }
   
-  if(udp.listen(3333)) {
+  if(udp.listen(3334)) {
     Serial.print("UDP Listening on IP: ");
     Serial.println(WiFi.localIP());
     udp.onPacket([](AsyncUDPPacket packet) {
       int len = packet.length(); int ii = 0;
       while (ii < len) {
         byte pixN = packet.data()[ii]; ii++;
-        byte pixR = packet.data()[ii]; ii++;
-        byte pixG = packet.data()[ii]; ii++;
-        byte pixB = packet.data()[ii]; ii++;
       }
       //strip.Show();
     });
