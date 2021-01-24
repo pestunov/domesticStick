@@ -2,6 +2,10 @@ import socket
 import time
 import random
 
+PIXEL_NUM = 226
+
+pixN = list(range(PIXEL_NUM))
+
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 server_address = '0.0.0.0'
@@ -23,35 +27,60 @@ print(data, '***', str(client_address))
 #         bytesData = bytes(map(int, lst))
 #         sent = sock.sendto(bytesData, client_address)
 #         time.sleep(1)
-
-pixBlk = 0
-forward = True
-
-while True:
-    
-    res = []
-    for ii in range(226):
-        res.append(ii)
-        if ((ii > 176) and (ii < 188)) or ((ii > 201) and (ii < 213)):
-            res.append(0) # red
-            res.append(0) # green
-            res.append(0) # blue
-        else:
-            res.append(pixBlk) # red
-            res.append(pixBlk) # green
-            res.append(pixBlk) # blue
-            
-        
 #     res= map(str, res)
 #     res = ','.join(res)
 #     res += '\n'
 #     print(res)
+def ledTurnAllColor(red=0, green=0, blue=0):
+    pixR = [_ledTestVar(red)]*PIXEL_NUM
+    pixG = [_ledTestVar(green)]*PIXEL_NUM
+    pixB = [_ledTestVar(blue)]*PIXEL_NUM
+    res = [j for i in zip(pixN, pixR, pixG, pixB) for j in i]
     bytesData = bytes(map(int, res))
     sent = sock.sendto(bytesData, client_address)
-    print(pixBlk)
-    pixBlk += 1
-    if (pixBlk > 255):
-        pixBlk = 0
+
+def _ledTestVar(var):
+    assert (type(var) == int), 'Input data expected to be \'int8\' type'
+    if var > 255:
+        return 255
+    if var < 0:
+        return 0
+    return var
+
+ledTurnAllColor(0, 250, 250)
+
+
+
+pixBlk = 0
+n = 0
+
+bitR = 0
+bitG = 0
+bitB = 0
+
+pixR = [bitR]*PIXEL_NUM
+pixG = [bitG]*PIXEL_NUM
+pixB = [bitB]*PIXEL_NUM
+
+
+pic = [[0,0,1],
+       [0,1,0],
+       [0,0,-1]]
+
+rr = gg = 255
+
+bb=0
+# strip 0.. 43.. 87.. 131.. 175
+# girl 176.. 188.. 201.. 213
+
+while True:
+    ledTurnAllColor(rr, gg, bb)
+    gg -= 1
+    if gg < 0:
+        gg=0
+    rr -= 1
+    if rr < 0:
+        rr=0
     time.sleep(1)
         
 

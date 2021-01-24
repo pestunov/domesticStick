@@ -19,26 +19,12 @@
 
 #include "WiFi.h"
 #include "AsyncUDP.h"
-#include <NeoPixelBus.h>
 
 /*  // WiFi setup
  *  const char * ssid = "my_ssid";
  *  const char * password = "my_password";
  */
 #include </home/pi/password.h>
-
-//global variables
-boolean flag, tag;
-int count = 0;
- 
-// strip setup
-const uint16_t PixelCount = 226; // this example assumes 4 pixels, making it smaller will cause a failure
-const uint8_t PixelPin = 4;  // make sure to set this to the correct pin, ignored for Esp8266
-
-NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> strip(PixelCount, PixelPin);
-RgbColor black(0);
-RgbColor red(200,0,0);
-RgbColor green(0,200,0);
 
 AsyncUDP udp;
 
@@ -55,7 +41,7 @@ void setup(){
   Serial.begin(115200);
 
   WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, password); 
+  WiFi.begin(ssid, password);
   if (WiFi.waitForConnectResult() != WL_CONNECTED) {
     Serial.println("WiFi Failed");
     while(1){       // eternal loop. blink 1st led red
@@ -94,5 +80,5 @@ void loop()
 {
     delay(2000);
     //Send broadcast
-    udp.broadcast("who is here?");
+    udp.broadcast("I'am #reley3");
 }
