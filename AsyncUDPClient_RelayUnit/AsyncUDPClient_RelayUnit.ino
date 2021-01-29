@@ -17,22 +17,15 @@
 #include "/home/pi/secure.h"
 //#include "D:/1_Projects/secure.h"
 
-#define RELAY_1 0
 #define CYCLE_MAX 200
-#define UNIT_NAME "UNIT#001"
+#define UNIT_NAME "UNIT001"
 
+String unitName; 
 
-// WiFi network name and password:
 const char * ssid = SECURE_SSID;          //secure.h #define SECURE_SSID = "my_ssid12345"
 const char * password = SECURE_PASSWORD;  //secure.h 
-
-//IP address to send UDP data to:
-// either use the ip address of the server or 
-// a network broadcast address
-const char * udpAddress = "192.168.1.255";
+const char * udpAddress = "192.168.1.255"; // a network broadcast address
 const int udpPort = 3334;
-//Are we currently connected?
-boolean connected = false;
 
 enum {
   CONNECTED,
@@ -40,8 +33,7 @@ enum {
   DISCON_TRIED
   } wifiState;
 
-char packetBuffer[255];               //buffer to hold incoming packet
-char ReplyBuffer[] = "acknowledged"; // a string to send back
+char packetBuffer[255]; // buffer to hold incoming packet
 
 boolean tag;
 int parseCounter;
@@ -49,24 +41,19 @@ int cycle_counter = 0;
 
 char my_status, my_tasks, parsePort, parseState;
 
-// an array of port to which relay are attached
-int relayPins[] = {0, 4, 17, 2000};
-// init state of pins
-int statePins[] = {0, 0, 0};
+int relayPins[] = {0, 4, 17, 2000}; // an array of port to which relay are attached
+int statePins[] = {0, 0, 0}; // init state of pins
 int pinCount = 3;  
 
-//The udp library class
-WiFiUDP udp;
+WiFiUDP udp; // udp library class
 
 
 void setup(){
-  // initialize digital pins
-  setPins();
-  // serial port for status monitoring
-  Serial.begin(115200);
-  
-  //Connect to the WiFi network
-  wifiState = DISCONNECTED;
+  unitName = String(UNIT_NAME);
+  setPins();   // initialize digital pins
+  Serial.begin(115200);  // serial port for status monitoring
+
+  wifiState = DISCONNECTED;  //Connect to the WiFi network
   connectToWiFi(ssid, password);
 
 } // setup
@@ -82,6 +69,9 @@ void loop()
     }
     if ((cycle_counter == 0) && (wifiState == DISCON_TRIED)){ // try to reconnect
       connectToWiFi(ssid, password);
+    }
+    if ((cycle_counter == 0) && (wifiState == DISCONNECTED)){ // still alife
+      Serial.print('.');
     }
     if (cycle_counter == 100){
       continue;
@@ -99,13 +89,12 @@ void loop()
       tStr.toUpperCase();
       Serial.println(tStr);
       int nnn = parseCommand(tStr);
+      if (nnn == 0){  // packet acknowleged 
       // send a reply, to the IP address and port that sent us the packet we received
-      udp.beginPacket(udp.remoteIP(), udp.remotePort());
-      tStr = UNIT_NAME;
-      tStr += " acknownleged at ";
-      tStr += WiFi.localIP();
-      udp.printf("hello");  
-      udp.endPacket();
+        udp.beginPacket(udp.remoteIP(), udp.remotePort());
+        udp.print(tStr);
+        udp.endPacket();
+      }
     }
     setPins();
     
@@ -153,27 +142,29 @@ void setPins(){
 
 int parseCommand(String strr){
   unsigned int len = strr.length();
-  if (len<10){
-    return 0;
+  unsigned int minLen = unitName.length()+2;
+  if (len < minLen){
+    return 1;
   } 
-  if (not strr.startsWith(UNIT_NAME)){
-    return 0; 
+  if (not strr.startsWith(unitName)){
+    return 2; 
   }
-  String sName = String(UNIT_NAME);
-  
-  int firstDot = strr.indexOf(".",sName.length());
+  // todo: add service command [sendStatus, setData, getData, setKey, getKey]
+  int firstDot = strr.indexOf(".",unitName.length());
   int secondDot = strr.indexOf(".", firstDot+1);
   String sstr1 = strr.substring(firstDot+1,secondDot);
   String sstr2= strr.substring(secondDot+1);
   unsigned int addr = sstr1.toInt();
   int value = sstr2.toInt();
-  Serial.println(addr);
+  Serial.print("Address: ");
+  Serial.print(addr);
+  Serial.print(", Value: ");
   Serial.println(value);
   if (addr > pinCount){
-    return 0;
+    return 3;
   }
   statePins[addr] = value;
-  return 1;
+  return 0;
 }
 
 /*void sendParsingStatus(int n, String tStr){
