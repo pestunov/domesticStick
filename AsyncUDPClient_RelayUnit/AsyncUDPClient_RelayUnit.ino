@@ -20,14 +20,15 @@
 #define CYCLE_MAX 200
 #define UNIT_NAME "UNIT001"
 
-String unitName; 
+String unitName, tempStr; 
 
-const char * ssid = SECURE_SSID;          //secure.h #define SECURE_SSID = "my_ssid12345"
-const char * password = SECURE_PASSWORD;  //secure.h 
-const char * udpAddress = "192.168.1.255"; // a network broadcast address
+const char* ssid = SECURE_SSID;          //secure.h #define SECURE_SSID = "my_ssid12345"
+const char* password = SECURE_PASSWORD;  //secure.h 
+const char* udpAddress = "192.168.001.255"; // a network broadcast address
 const int udpPort = 3334;
 
 enum {
+  JUST_CONNECTED,
   CONNECTED,
   DISCONNECTED,
   DISCON_TRIED
@@ -62,15 +63,23 @@ void loop()
 {
   for(int cycle_counter = 0; cycle_counter < CYCLE_MAX; cycle_counter++){
     delay(10);
-    if ((cycle_counter == 0) && (wifiState == CONNECTED)){ //only send data when connected
+    if ((cycle_counter == 10) && (wifiState == JUST_CONNECTED)){ //only send data when connected
+      wifiState = CONNECTED;
+      tempStr = unitName + " online";
+      udp.beginPacket(udpAddress,udpPort);
+      udp.print(tempStr);
+      udp.endPacket();
+    }
+    if ((cycle_counter == 12) && (wifiState == CONNECTED)){ //only send data when connected
       udp.beginPacket(udpAddress,udpPort);
       udp.printf("Seconds since boot: %lu", millis()/1000);
       udp.endPacket();
     }
-    if ((cycle_counter == 0) && (wifiState == DISCON_TRIED)){ // try to reconnect
+    if ((cycle_counter == 20) && (wifiState == DISCON_TRIED)){ // try to reconnect
+      wifiState = DISCONNECTED;
       connectToWiFi(ssid, password);
     }
-    if ((cycle_counter == 0) && (wifiState == DISCONNECTED)){ // still alife
+    if ((cycle_counter == 30) && (wifiState == DISCONNECTED)){ // still alife
       Serial.print('.');
     }
     if (cycle_counter == 100){
@@ -91,8 +100,9 @@ void loop()
       int nnn = parseCommand(tStr);
       if (nnn == 0){  // packet acknowleged 
       // send a reply, to the IP address and port that sent us the packet we received
+        tempStr = unitName + " done!";
         udp.beginPacket(udp.remoteIP(), udp.remotePort());
-        udp.print(tStr);
+        udp.print(tempStr);
         udp.endPacket();
       }
     }
@@ -120,7 +130,7 @@ void WiFiEvent(WiFiEvent_t event){
           //initializes the UDP state
           //This initializes the transfer buffer
           udp.begin(WiFi.localIP(),udpPort);
-          wifiState = CONNECTED;
+          wifiState = JUST_CONNECTED;
           break;
       case SYSTEM_EVENT_STA_DISCONNECTED:
           Serial.println("WiFi lost connection");
@@ -165,6 +175,12 @@ int parseCommand(String strr){
   }
   statePins[addr] = value;
   return 0;
+}
+
+void sendUDP(String strr, const char * udpAddress, int udpPort){
+  udp.beginPacket(udpAddress, udpPort);
+  udp.print(strr);
+  udp.endPacket();
 }
 
 /*void sendParsingStatus(int n, String tStr){
