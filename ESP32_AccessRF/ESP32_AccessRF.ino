@@ -1,22 +1,23 @@
 /*
  * Base: ESP32
- * module intend for transport data 
- * in: UDP module --> out: WS2812B strip (thank you Makuna)
+ * dome access controller
+ * uses: rfid RC522
  * 
- * received data format
- * 
- * (x*4)th byte - pixel num
- * (x*4)+1th byte - x pixel red brightness
- * (x*4)+2th byte - x pixel green brightness
- * (x*4)+3th byte - x pixel blue brightness
- * 
+    RC-522 | Arduino 
+    ----------------
+       SDA | D
+       SCK | D
+      MOSI | D
+      MISO | D
+       IRQ | N/A
+       GND | GND
+       RST | D
+      3.3V | 3.3V  
  * uses:
  * WiFi ver 1.2.7 by Arduino
- * NeoPixelBus by Makuna ver 2.6.0 by Michael C. Miller
+ * 
  * 
  */
-
-#include <NeoPixelBus.h>
 
 /*** start common WiFi UDP block */
 #include <WiFi.h>
@@ -25,7 +26,7 @@
 //#include "D:/1_Projects/secure.h"
 
 #define CYCLE_PERIOD 200
-#define UNIT_NAME "UNIT002123"
+#define UNIT_NAME "UNIT000003"
 #define UDP_TX_PACKET_MAX_SIZE 1000
 #define UDP_TX_PACKET_HEAD_SIZE 40
 
