@@ -3,21 +3,22 @@
  * dome access controller
  * uses: rfid RC522
  * 
-    RC-522 | Arduino 
-    ----------------
-       SDA | D
-       SCK | D
-      MOSI | D
-      MISO | D
-       IRQ | N/A
-       GND | GND
-       RST | D
-      3.3V | 3.3V  
- * uses:
+    RC-522 | Arduino| ESP32
+    -------------------------
+   SDA(SS) | D      | 21
+       SCK | D      | 18
+      MOSI | D      | 23
+      MISO | D      | 19
+       IRQ | N/A    | N/A
+       GND | GND    | GND
+       RST | D      | 22
+      3.3V | 3.3V   | 3.3V
+      
  * WiFi ver 1.2.7 by Arduino
- * 
- * 
  */
+#include <SPI.h>
+#include <MFRC522.h>
+#include <EEPROM.h>
 
 /*** start common WiFi UDP block */
 #include <WiFi.h>
@@ -26,7 +27,7 @@
 //#include "D:/1_Projects/secure.h"
 
 #define CYCLE_PERIOD 200
-#define UNIT_NAME "UNIT000003"
+#define UNIT_NAME "UNIT_RF001"
 #define UDP_TX_PACKET_MAX_SIZE 1000
 #define UDP_TX_PACKET_HEAD_SIZE 40
 
@@ -58,28 +59,23 @@ boolean tag = false;
 WiFiUDP udp; // udp library class
 /*** end of common WiFi UDP block */
 
-// strip setup
-const uint16_t PixelNum = 226;  //226 this example assumes more then 4 pixels, making it smaller will cause a failure
-const uint8_t PixelPin = 4;       // make sure to set this to the correct pin, ignored for Esp8266
+/* rf id setup */
+uint8_t successRead;
+byte readCard[4];
 
-NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> strip(PixelNum, PixelPin);
-RgbColor black(0);
-RgbColor red(200,0,0);
-RgbColor pale_red(1,0,0);
-RgbColor green(0,200,0);
-RgbColor pale_green(0,1,0);
-
+#define RST_PIN         22          // Configurable, see typical pin layout above
+#define SS_PIN          21          // Configurable, see typical pin layout above
+MFRC522 mfrc522(SS_PIN, RST_PIN);   // Create MFRC522 instance
+/* end rf id setup */
 
 void setup(){
   Serial.begin(115200);
   setupCommon();
-  // Switch off all of the neopixels
-  strip.Begin();
-  strip.SetPixelColor(0, pale_green);  // power on. 1st green.
-  for (int pixN = 1; pixN < PixelNum; pixN++) {
-    strip.SetPixelColor(pixN, black);
-  }
-  strip.Show();
+  SPI.begin();                      // Init SPI bus
+  mfrc522.PCD_Init();               // Init MFRC522 card
+  //If you set Antenna Gain to Max it will increase reading distance
+  //mfrc522.PCD_SetAntennaGain(mfrc522.RxGain_max);
+
 }
 
 void loop()
@@ -94,8 +90,8 @@ void loop()
       udp.endPacket();
 
       tag = true;
-      strip.SetPixelColor(0, green);
-      strip.Show();
+//      strip.SetPixelColor(0, green);
+//      strip.Show();
 
     }
     if ((cycle_counter == 12) && (wifiState == CONNECTED)){ //only send data when connected
@@ -108,20 +104,33 @@ void loop()
       wifiState = DISCONNECTED;
       connectToWiFi(ssid, password);
       tag = true;
-      strip.SetPixelColor(0, red);
-      strip.Show();
+//      strip.SetPixelColor(0, red);
+//      strip.Show();
     }
     if ((cycle_counter == 16) && (wifiState == DISCONNECTED)){ // still disconnected
       Serial.print('.');
       tag = true;
-      strip.SetPixelColor(0, pale_red);
-      strip.Show();
+//      strip.SetPixelColor(0, pale_red);
+//      strip.Show();
     }
     if ((cycle_counter == 20) && (tag)){
       tag = false;
-      strip.SetPixelColor(0, black);
-      strip.Show();
+//      strip.SetPixelColor(0, black);
+//      strip.Show();
     }
+
+    if ((cycle_counter % 10) == 0){
+      if (getRFID() == 0) {
+        udp.beginPacket(udpAddress,udpPort);
+        udp.print(unitName);
+        udp.print(": ");
+        for ( uint8_t i = 0; i < 4; i++) {  //
+          udp.print(mfrc522.uid.uidByte[i]);
+        }
+        udp.endPacket();
+      }
+    }
+
     if (cycle_counter == 100){
       continue;
     }
@@ -142,21 +151,9 @@ void loop()
 /* functions  */
 
 int parseCommand(char packet[], int pCom, int pDat, int len){
+  // packet = received bytes, pCom = pointer to command, pDat = pointer to data, len = pocket lenght
   // todo: add service command [sendStatus, setData, getData, setKey, getKey]
-  for(int ii = pDat; ii < (len-4); ii++){
-    byte pixN = packet[ii]; ii++;
-    Serial.print(pixN);
-    byte pixR = packet[ii]; ii++;
-    Serial.print(pixR);
-    byte pixG = packet[ii]; ii++;
-    Serial.print(pixG);
-    byte pixB = packet[ii];
-    Serial.println(pixB);
-    RgbColor myColor(pixR,pixG,pixB);
-    strip.SetPixelColor(pixN, myColor);
-  }
-  strip.Show();
-  return 0;
+  return 0; // 0 - all ok
 }
 
 /*** common WifI UDP Block */
@@ -220,4 +217,26 @@ void WiFiEvent(WiFiEvent_t event){
           break;
       default: break;
     }
+}
+
+uint8_t getRFID() {
+  // Getting ready for Reading PICCs
+  if ( ! mfrc522.PICC_IsNewCardPresent()) { //If a new PICC placed to RFID reader continue
+    return 1;
+  }
+  if ( ! mfrc522.PICC_ReadCardSerial()) {   //Since a PICC placed get Serial and continue
+    return 1;
+  }
+  // There are Mifare PICCs which have 4 byte or 7 byte UID care if you use 7 byte PICC
+  // I think we should assume every PICC as they have 4 byte UID
+  // Until we support 7 byte PICCs
+  Serial.println(F("Scanned PICC's UID:"));
+  for ( uint8_t i = 0; i < 4; i++) {  //
+    readCard[i] = mfrc522.uid.uidByte[i];
+    Serial.print(readCard[i], DEC);
+    Serial.print("*");
+  }
+  Serial.println("");
+  mfrc522.PICC_HaltA(); // Stop reading
+  return 0;
 }
