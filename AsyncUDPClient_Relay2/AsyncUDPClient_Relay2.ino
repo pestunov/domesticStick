@@ -4,20 +4,20 @@
 #include "secure.h"
 #include "cipher.h"
 
-#define RELEY_ON LOW
-#define RELEY_OFF HIGH
+#define RELAY_ON LOW
+#define RELAY_OFF HIGH
 
-#define RELEY_1_PIN 16
-#define RELEY_2_PIN 17
-#define RELEY_3_PIN 5
-#define RELEY_4_PIN 18
+#define RELAY_1_PIN 16
+#define RELAY_2_PIN 17
+#define RELAY_3_PIN 5
+#define RELAY_4_PIN 18
 
-uint8_t releyPins[] = {RELEY_1_PIN, RELEY_2_PIN, RELEY_3_PIN, RELEY_4_PIN, 0};
-uint8_t reley_stat = 0x00;  // all pins are disactivate
+uint8_t relayPins[] = {RELAY_1_PIN, RELAY_2_PIN, RELAY_3_PIN, RELAY_4_PIN, 0};
+uint8_t relay_stat = 0x00;  // all pins are disactivate
 
 const char *ssid = SECURE_SSID;
 const char *password = SECURE_PASSWORD;
-const char *module_name = "reley_module_00001";
+const char *module_name = "relay_module_00001";
 
 String udpAddress;
 uint16_t udpPort = 33333;
@@ -49,21 +49,21 @@ void parsePacket(AsyncUDPPacket packet) {
   if (msg != NULL && len >= 4) {
     for (uint8_t i = 0; i < len; i++) {
       if (msg[i] == 0x31) {
-        reley_stat |= (1 << i);
+        relay_stat |= (1 << i);
         Serial.printf(" relay %d is on!\n", i);
       } else {
-        reley_stat &= ~(1 << i);
+        relay_stat &= ~(1 << i);
         Serial.printf(" relay %d is off!\n", i);
       }
     }
   }
-  set_reley_pins();
+  set_relay_pins();
 }
 
-void set_reley_pins() {
+void set_relay_pins() {
   for (uint8_t i = 0; i < 100; i++) {
-    if (releyPins[i] == 0) break;
-    if ((reley_stat & (1 << i)) != 0) digitalWrite(releyPins[i], RELEY_ON); else digitalWrite(releyPins[i], RELEY_OFF);
+    if (relayPins[i] == 0) break;
+    if ((relay_stat & (1 << i)) != 0) digitalWrite(relayPins[i], RELAY_ON); else digitalWrite(relayPins[i], RELAY_OFF);
   }
 }
 
@@ -76,15 +76,16 @@ void setup() {
   connectToWiFi(ssid, password);
   delay(100);
 
-  set_reley_pins();
-  pinMode(RELEY_1_PIN, OUTPUT);
-  pinMode(RELEY_2_PIN, OUTPUT);
-  pinMode(RELEY_3_PIN, OUTPUT);
-  pinMode(RELEY_4_PIN, OUTPUT);
+  set_relay_pins();
+  delay(100);
+  pinMode(RELAY_1_PIN, OUTPUT);
+  pinMode(RELAY_2_PIN, OUTPUT);
+  pinMode(RELAY_3_PIN, OUTPUT);
+  pinMode(RELAY_4_PIN, OUTPUT);
 }
 
 void loop() {
-  set_reley_pins();
+  set_relay_pins();
   switch(WiFi.status()) {
     case WL_NO_SSID_AVAIL:
       connected = false;
@@ -132,16 +133,16 @@ void loop() {
     toSend += millis();
     toSend += "; my_port: ";
     toSend += myUdpPort;
-    toSend += "; reley_status: ";
-    toSend += reley_stat;
+    toSend += "; relay_status: ";
+    toSend += relay_stat;
 
     udp.broadcastTo(toSend.c_str(), udpPort);
     //udp.printf("timer: %lu; ", millis() / 1000);
-    //udp.printf("reley status: %s; ", String(reley_stat, BIN).c_str());
+    //udp.printf("relay status: %s; ", String(relay_stat, BIN).c_str());
 
     Serial.printf("hereis: %s; ", module_name);
     Serial.printf("Seconds since boot: %lu; ", millis() / 1000);
-    Serial.printf("reley status: %d; ", reley_stat);
+    Serial.printf("relay status: %d; ", relay_stat);
     Serial.println("");
   
   }
