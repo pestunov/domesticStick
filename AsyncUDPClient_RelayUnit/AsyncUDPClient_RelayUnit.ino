@@ -34,19 +34,18 @@ enum {
   DISCON_TRIED
   } wifiState;
 
-char packetBuffer[255]; // buffer to hold incoming packet
+char packetBuffer[1000]; // buffer to hold incoming packet
 
 boolean tag;
 int parseCounter;
 int cycle_counter = 0;
-
 char my_status, my_tasks, parsePort, parseState;
+
+WiFiUDP udp; // udp library class
 
 int relayPins[] = {0, 4, 17, 2000}; // an array of port to which relay are attached
 int statePins[] = {0, 0, 0}; // init state of pins
 int pinCount = 3;  
-
-WiFiUDP udp; // udp library class
 
 
 void setup(){
@@ -65,14 +64,15 @@ void loop()
     delay(10);
     if ((cycle_counter == 10) && (wifiState == JUST_CONNECTED)){ //only send data when connected
       wifiState = CONNECTED;
-      tempStr = unitName + " online";
-      udp.beginPacket(udpAddress,udpPort);
+      tempStr = unitName + " started!";
+      udp.beginPacket(udp.remoteIP(), udp.remotePort());
       udp.print(tempStr);
       udp.endPacket();
     }
     if ((cycle_counter == 12) && (wifiState == CONNECTED)){ //only send data when connected
       udp.beginPacket(udpAddress,udpPort);
-      udp.printf("Seconds since boot: %lu", millis()/1000);
+      udp.print(unitName);
+      udp.printf(" still here %lu", millis()/1000);
       udp.endPacket();
     }
     if ((cycle_counter == 20) && (wifiState == DISCON_TRIED)){ // try to reconnect
@@ -140,16 +140,6 @@ void WiFiEvent(WiFiEvent_t event){
     }
 }
 
-void setPins(){
-  for (int pin = 1; pin < pinCount; pin++) {
-    if (relayPins[pin] >= 1000){
-      break;
-    }
-    digitalWrite(relayPins[pin], (statePins[pin]==1)? HIGH : LOW);   // turn the port off
-    pinMode(relayPins[pin], OUTPUT);     // pin as output
-  }
-}
-
 int parseCommand(String strr){
   unsigned int len = strr.length();
   unsigned int minLen = unitName.length()+2;
@@ -197,3 +187,13 @@ void sendUDP(String strr, const char * udpAddress, int udpPort){
       Serial.print(", port ");  Serial.println(udp.remotePort());
        read the packet into packetBufffer
 */
+
+void setPins(){
+  for (int pin = 1; pin < pinCount; pin++) {
+    if (relayPins[pin] >= 1000){
+      break;
+    }
+    digitalWrite(relayPins[pin], (statePins[pin]==1)? HIGH : LOW);   // turn the port off
+    pinMode(relayPins[pin], OUTPUT);     // pin as output
+  }
+}
