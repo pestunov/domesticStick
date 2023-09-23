@@ -1,7 +1,14 @@
-# domesticStick
+# domesticStick  
 STM32 & AVR & ESP32 modules for smartdacha units   
+## AsyncUDPClient_Relay2  
 
-## AsyncUDPServer_Neopixel module
+renewed project `AsyncUDPClient_RelayUnit`  
+Several (four) power switches/relays controller with associated buttons  
+>  to do:
+>  - [ ] commands to on/off each power switch
+>  - [ ] buttons for manual switches control
+
+## AsyncUDPServer_Neopixel module  
 
 ESP32 platform. this module is a bridge between the local network and ws2812 bus
  
