@@ -4,6 +4,8 @@
 #include "secure.h"
 #include "cipher.h"
 
+#define DEBUG
+
 #define RELAY_ON LOW
 #define RELAY_OFF HIGH
 
@@ -33,7 +35,6 @@ const char *password = SECURE_PASSWORD;
 const char *module_name = "relay_module_00001";
 const char *module_id = "kalyabalya";
 
-String udpAddress;
 uint16_t udpPort = 33333;
 uint16_t myUdpPort = 50010;
 
@@ -42,6 +43,20 @@ boolean connected = false;
 //The udp library class
 AsyncUDP udp;
 
+// main cycle counter
+uint8_t mainCycleCounter = 0;
+
+void serialPrint(String inStr) {
+#ifdef DEBUG
+  Serial.print(inStr);
+#endif
+}
+
+void serialPrintln(String inStr) {
+#ifdef DEBUG
+  Serial.println(inStr);
+#endif
+}
 
 void connectToWiFi(const char* ssid, const char* pwd) {
   // delete old config
@@ -49,7 +64,52 @@ void connectToWiFi(const char* ssid, const char* pwd) {
   WiFi.mode(WIFI_STA);
   //Initiate connection
   WiFi.begin(ssid, pwd);
-  Serial.println("Connecting to WiFi network: " + String(ssid));
+  serialPrintln("Connecting to WiFi network: " + String(ssid));
+}
+
+boolean isWiFiConnected() {
+  switch(WiFi.status()) {
+    case WL_NO_SSID_AVAIL:
+      serialPrintln("[WiFi] SSID not found");
+      return false;
+    case WL_CONNECT_FAILED:
+      serialPrintln("[WiFi] Failed - WiFi not connected!");
+      return false;
+    case WL_CONNECTION_LOST:
+      serialPrintln("[WiFi] Connection was lost");
+      return false;
+    case WL_DISCONNECTED:
+      serialPrintln("[WiFi] WiFi is disconnected");
+      return false;
+    case WL_CONNECTED:
+      serialPrintln("[WiFi] WiFi is connected!");
+      return true;
+    default:
+      serialPrintln("[WiFi] WiFi Status: " + WiFi.status());
+      return false;
+  }  // switch
+  return false;
+}
+
+String getUDPAddress() {
+  String res = String(WiFi.localIP()[0]) + "." +
+               String(WiFi.localIP()[1]) + "." + 
+               String(WiFi.localIP()[2]) + ".255";
+  return res;
+}
+
+String getStatusString() {
+  String res = "hello server; I_am: ";
+  res += module_name;
+  res += "; timer: ";
+  res += millis();
+  res += "; my_port: ";
+  res += myUdpPort;
+  res += "; relay_status: ";
+  res += relay_stat;
+  res += "; button_status: ";
+  res += button_stat;
+  return res;
 }
 
 // Определяем callback функцию обработки пакета
@@ -59,19 +119,18 @@ void parsePacket(AsyncUDPPacket packet) {
   // Записываем размер данных
   const size_t len = packet.length();
   // Если адрес данных не равен нулю и размер данных больше нуля...
-  Serial.print("Got packet: ");
+  serialPrint("Got packet: ");
   if (msg != NULL && len >= 4) {
     for (uint8_t i = 0; i < len; i++) {
       if (msg[i] == 0x31) {
         relay_stat |= (1 << i);
-        Serial.printf(" relay %d is on!\n", i);
+        serialPrint(" relay " + String(i) + " is on!");
       } else {
         relay_stat &= ~(1 << i);
-        Serial.printf(" relay %d is off!\n", i);
+        serialPrint(" relay " + String(i) + " is off!");
       }
     }
   }
-  set_relay_pins();
 }
 
 void set_relay_pins() {
@@ -123,70 +182,30 @@ void setup() {
 }
 
 void loop() {
-  set_relay_pins();
-  switch(WiFi.status()) {
-    case WL_NO_SSID_AVAIL:
-      connected = false;
-      Serial.println("[WiFi] SSID not found");
-      break;
-    case WL_CONNECT_FAILED:
-      connected = false;
-      Serial.println("[WiFi] Failed - WiFi not connected!");
-      break;
-    case WL_CONNECTION_LOST:
-      connected = false;
-      Serial.println("[WiFi] Connection was lost");
-      break;
-    case WL_DISCONNECTED:
-      connected = false;
-      Serial.println("[WiFi] WiFi is disconnected");
-      break;
-    case WL_CONNECTED:
+  mainCycleCounter++;
+  if (mainCycleCounter == 2) {
+    if (isWiFiConnected()) {
       if (!connected) {
         connected = true;
-        udpAddress = String(WiFi.localIP()[0]) + "." + 
-                    String(WiFi.localIP()[1]) + "." + 
-                    String(WiFi.localIP()[2]) + ".255";
-        Serial.print("[WiFi] WiFi is connected! Got IP address: ");
-        Serial.print(WiFi.localIP());
-        Serial.print("; broadcast address: ");
-        Serial.println(udpAddress);
-        if(udp.listen(myUdpPort)) {
-          // При получении пакета вызываем callback функцию
+        serialPrintln("[WiFi] WiFi is connected! Got IP address: " + String(WiFi.localIP()));
+        serialPrintln("broadcast address: " + getUDPAddress());
+        if(udp.listen(myUdpPort)) {  // При получении пакета вызываем callback функцию
           udp.onPacket(parsePacket);
         }
-
       }
-      break;
-    default:
-      Serial.print("[WiFi] WiFi Status: ");
-      Serial.println(WiFi.status());
-      break;
-  }  // switch
-  if (connected) {
-    //Send a packet
-    String toSend = "hello server; I_am: ";
-    toSend += module_name;
-    toSend += "; timer: ";
-    toSend += millis();
-    toSend += "; my_port: ";
-    toSend += myUdpPort;
-    toSend += "; relay_status: ";
-    toSend += relay_stat;
-    toSend += "; button_status: ";
-    toSend += button_stat;
+      String toSend = getStatusString();
+      udp.broadcastTo(toSend.c_str(), udpPort);
+      serialPrintln(toSend);
+    } else {  
+      //not connected to the WiFi network
+      connected = false;
+      connectToWiFi(ssid, password);
+    }
 
-    udp.broadcastTo(toSend.c_str(), udpPort);
-    Serial.println(toSend);
-  } else {
-    //Connect to the WiFi network
-    connectToWiFi(ssid, password);
-    delay(5000);
   }
+  // if (mainCycleCounter == 3) { // do some cyclique}
 
-  for (uint16_t i = 0; i < 200; i++){
-    get_button_state();
-    delay(10);
-  }
-
+  get_button_state();
+  set_relay_pins();
+  delay(10);
 }  // loop
