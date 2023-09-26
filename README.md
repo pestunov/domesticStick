@@ -6,7 +6,7 @@ renewed project `AsyncUDPClient_RelayUnit`
 Several (four) power switches/relays controller with associated buttons  
 >  to do:
 >  - [ ] commands to on/off each power switch
->  - [ ] buttons for manual switches control
+>  - [x] buttons for manual switches control
 
 ## AsyncUDPServer_Neopixel module  
 
