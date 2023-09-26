@@ -44,7 +44,7 @@ boolean connected = false;
 AsyncUDP udp;
 
 // main cycle counter
-uint8_t mainCycleCounter = 0;
+uint16_t mainCycleCounter = 0;
 
 void serialPrint(String inStr) {
 #ifdef DEBUG
@@ -99,15 +99,17 @@ String getUDPAddress() {
 }
 
 String getStatusString() {
-  String res = "hello server; I_am: ";
+  String res = "hello server; type=";
   res += module_name;
-  res += "; timer: ";
+  res += "; id=";
+  res += module_id;
+  res += "; timer=";
   res += millis();
-  res += "; my_port: ";
+  res += "; my_port=";
   res += myUdpPort;
-  res += "; relay_status: ";
+  res += "; relay_status=";
   res += relay_stat;
-  res += "; button_status: ";
+  res += "; button_status=";
   res += button_stat;
   return res;
 }
@@ -183,7 +185,8 @@ void setup() {
 
 void loop() {
   mainCycleCounter++;
-  if (mainCycleCounter == 2) {
+  if (mainCycleCounter == 500) mainCycleCounter = 0;
+  if (mainCycleCounter == 1) {
     if (isWiFiConnected()) {
       if (!connected) {
         connected = true;
@@ -205,7 +208,7 @@ void loop() {
   }
   // if (mainCycleCounter == 3) { // do some cyclique}
 
-  get_button_state();
+  if (get_button_state()) mainCycleCounter = 0;
   set_relay_pins();
   delay(10);
 }  // loop
