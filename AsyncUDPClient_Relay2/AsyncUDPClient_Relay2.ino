@@ -82,7 +82,7 @@ boolean isWiFiConnected() {
       serialPrintln("[WiFi] WiFi is disconnected");
       return false;
     case WL_CONNECTED:
-      serialPrintln("[WiFi] WiFi is connected!");
+      // serialPrintln("[WiFi] WiFi is connected!");
       return true;
     default:
       serialPrintln("[WiFi] WiFi Status: " + WiFi.status());
@@ -111,6 +111,23 @@ String getStatusString() {
   res += relay_stat;
   res += "; button_status=";
   res += button_stat;
+  return res;
+}
+
+String getStatusStringJSON() {
+  char tstr[50];
+  String res = "{";
+  snprintf(tstr, 50, "'module_name': '%s', ", module_name);
+  res += tstr;
+  snprintf(tstr, 50, "'module_id': '%s', ", module_id);
+  res += tstr;
+  snprintf(tstr, 50, "'timer': %lu, ", millis());
+  res += tstr;
+  snprintf(tstr, 50, "'relay_state': %d, ", relay_stat);
+  res += tstr;
+  snprintf(tstr, 50, "'button_state': %d", button_stat);
+  res += tstr;
+  res += "}";
   return res;
 }
 
@@ -160,9 +177,10 @@ boolean get_button_state() {
 
 void setup() {
   // Initilize hardware serial:
+#ifdef DEBUG
   Serial.begin(115200);
   delay(100);
-
+#endif
   //Connect to the WiFi network
   connectToWiFi(ssid, password);
   delay(100);
@@ -195,8 +213,8 @@ void loop() {
         if(udp.listen(myUdpPort)) {  // При получении пакета вызываем callback функцию
           udp.onPacket(parsePacket);
         }
-      }
-      String toSend = getStatusString();
+      }  // if not connected
+      String toSend = getStatusStringJSON();
       udp.broadcastTo(toSend.c_str(), udpPort);
       serialPrintln(toSend);
     } else {  
