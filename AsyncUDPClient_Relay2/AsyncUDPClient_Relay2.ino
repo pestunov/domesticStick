@@ -91,7 +91,16 @@ boolean isWiFiConnected() {
   return false;
 }
 
-String getUDPAddress() {
+String IPaddressToString() {
+  String res = String(WiFi.localIP()[0]) + "." +
+               String(WiFi.localIP()[1]) + "." + 
+               String(WiFi.localIP()[2]) + "." + 
+               String(WiFi.localIP()[3]);
+  return res;
+}
+
+
+String broadcastToString() {
   String res = String(WiFi.localIP()[0]) + "." +
                String(WiFi.localIP()[1]) + "." + 
                String(WiFi.localIP()[2]) + ".255";
@@ -208,8 +217,8 @@ void loop() {
     if (isWiFiConnected()) {
       if (!connected) {
         connected = true;
-        serialPrintln("[WiFi] WiFi is connected! Got IP address: " + String(WiFi.localIP()));
-        serialPrintln("broadcast address: " + getUDPAddress());
+        serialPrintln("[WiFi] WiFi is connected! Got IP address: " + IPaddressToString());
+        serialPrintln("broadcast address: " + broadcastToString());
         if(udp.listen(myUdpPort)) {  // При получении пакета вызываем callback функцию
           udp.onPacket(parsePacket);
         }
